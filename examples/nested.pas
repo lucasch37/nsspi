@@ -11,12 +11,9 @@ var x : integer;
 
 begin
    x := (a + b ) * 2;
-
-   Beta(5, 10);      { procedure call }
+   Beta(5, 10); 
 end;
 
-begin { Main }
-
-   Alpha(3 + 5, 7);  { procedure call }
-
-end.  { Main }
+begin
+   Alpha(3 + 5, 7);  
+end. 
