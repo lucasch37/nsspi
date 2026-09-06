@@ -805,6 +805,13 @@ func (p *Parser) factor() (ir.Node, error) {
 
 		return ir.NewBooleanLit(token), nil
 
+	case tokens.FALSE:
+		if err := p.eat(tokens.FALSE); err != nil {
+			return nil, err
+		}
+
+		return ir.NewBooleanLit(token), nil
+
 	default:
 		if p.currentToken.Type == tokens.ID && p.nextToken.Type == tokens.LPAREN {
 			return p.call()
