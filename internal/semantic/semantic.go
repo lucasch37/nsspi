@@ -200,6 +200,10 @@ func (sa *SemanticAnalyzer) visitBinOp(node *ir.BinOp) (ir.DataType, error) {
 			return ir.RealType, nil
 		}
 
+		if node.Op.Type == tokens.FLOAT_DIV {
+			return ir.RealType, nil
+		}
+
 		return ir.IntegerType, nil
 
 	case tokens.PLUS:

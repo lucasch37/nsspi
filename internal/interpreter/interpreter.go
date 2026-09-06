@@ -122,7 +122,9 @@ func (i *Interpreter) visitProgram(node *ir.Program) (Object, error) {
 	i.CallStack.Push(ar)
 	i.log(i.CallStack.String())
 
-	i.visit(node.Block)
+	if _, err := i.visit(node.Block); err != nil {
+		return nil, err
+	}
 
 	i.log(fmt.Sprintf("LEAVE: PROGRAM %s", programName))
 	i.log(i.CallStack.String())
@@ -274,6 +276,10 @@ func (i *Interpreter) visitBinOp(node *ir.BinOp) (Object, error) {
 			return IntegerObject{Value: leftValue * rightValue}, nil
 
 		case tokens.MOD:
+			if rightValue == 0 {
+				return nil, i.error(errors.DivideByZero, node.Token)
+			}
+
 			return IntegerObject{Value: leftValue % rightValue}, nil
 
 		case tokens.INTEGER_DIV:
