@@ -86,6 +86,8 @@ func (sa *SemanticAnalyzer) visit(node ir.Node) (ir.DataType, error) {
 			return ir.NoType, sa.error(errors.InvalidOperand, node.Token)
 		}
 
+		return exprType, nil
+
 	case *ir.Compound:
 		for _, node := range node.Children {
 			if _, err := sa.visit(node); err != nil {
