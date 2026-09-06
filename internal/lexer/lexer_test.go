@@ -64,6 +64,21 @@ func TestGetNextToken(t *testing.T) {
 				{Type: tokens.EOF},
 			},
 		},
+		{
+			name:  "case-insensitive keywords",
+			input: "program INTEGER real String div var PROCEDURE function write writeln boolean if then else mod begin end WHILE",
+			want: []tokens.Token{
+				{Type: tokens.PROGRAM, Value: "PROGRAM"}, {Type: tokens.INTEGER, Value: "INTEGER"},
+				{Type: tokens.REAL, Value: "REAL"}, {Type: tokens.STRING, Value: "STRING"},
+				{Type: tokens.INTEGER_DIV, Value: "DIV"}, {Type: tokens.VAR, Value: "VAR"},
+				{Type: tokens.PROCEDURE, Value: "PROCEDURE"}, {Type: tokens.FUNCTION, Value: "FUNCTION"},
+				{Type: tokens.WRITE, Value: "WRITE"}, {Type: tokens.WRITELN, Value: "WRITELN"},
+				{Type: tokens.BOOLEAN, Value: "BOOLEAN"}, {Type: tokens.IF, Value: "IF"},
+				{Type: tokens.THEN, Value: "THEN"}, {Type: tokens.ELSE, Value: "ELSE"},
+				{Type: tokens.MOD, Value: "MOD"}, {Type: tokens.BEGIN, Value: "BEGIN"},
+				{Type: tokens.END, Value: "END"}, {Type: tokens.WHILE, Value: "WHILE"}, {Type: tokens.EOF},
+			},
+		},
 	}
 
 	for _, tt := range tests {

@@ -47,6 +47,8 @@ statement : compoundStatement
           | callStatement
           | assignmentStatement
           | writeStatement
+          | forStatement
+          | whileStatement
           | empty
 
 callStatement : call
@@ -58,6 +60,10 @@ writeStatement : (WRITE | WRITELN) (LPAREN (expr (COMMA expr)*)? RPAREN)?
 assignmentStatement : identifier ASSIGN expr
 
 ifStatement : IF expr THEN statement (ELSE statement)?
+
+forStatement; FOR assignmentStatement (TO | DOWNTO) expr DO statement
+
+whileStatement; WHILE expr DO statement
 
 empty :
 
@@ -126,6 +132,7 @@ func (p *Parser) error(code errors.ErrorCode) error {
 
 func (p *Parser) eat(tokenType tokens.TokenType) error {
 	if p.currentToken.Type != tokenType {
+		fmt.Printf("Expected token type: %s, got: %s\n", tokenType.String(), p.currentToken.Type.String())
 		return p.error(errors.UnexpectedToken)
 	}
 
@@ -554,13 +561,87 @@ func (p *Parser) statement() (ir.Node, error) {
 	case tokens.IF:
 		return p.ifStatement()
 
+	case tokens.FOR:
+		return p.forStatement()
+
+	case tokens.WHILE:
+		return p.whileStatement()
+
 	default:
 		return p.empty()
 	}
 }
 
-func (p *Parser) ifStatement() (*ir.IfStatement, error) {
+func (p *Parser) whileStatement() (*ir.WhileStatement, error) {
+	if err := p.eat(tokens.WHILE); err != nil {
+		return nil, err
+	}
 
+	conditionNode, err := p.expr()
+	if err != nil {
+		return nil, err
+	}
+
+	if err := p.eat(tokens.DO); err != nil {
+		return nil, err
+	}
+
+	statement, err := p.statement()
+	if err != nil {
+		return nil, err
+	}
+
+	return ir.NewWhileStatement(conditionNode, statement), nil
+}
+
+func (p *Parser) forStatement() (*ir.ForStatement, error) {
+	if err := p.eat(tokens.FOR); err != nil {
+		return nil, err
+	}
+
+	assignmentNode, err := p.assignmentStatement()
+	if err != nil {
+		return nil, err
+	}
+
+	var up bool
+	directionToken := p.currentToken
+
+	switch directionToken.Type {
+	case tokens.TO:
+		if err := p.eat(tokens.TO); err != nil {
+			return nil, err
+		}
+		up = true
+
+	case tokens.DOWNTO:
+		if err := p.eat(tokens.DOWNTO); err != nil {
+			return nil, err
+		}
+		up = false
+
+	default:
+		return nil, p.error(errors.UnexpectedToken)
+	}
+
+	endExpr, err := p.expr()
+	if err != nil {
+		return nil, err
+	}
+
+	if err := p.eat(tokens.DO); err != nil {
+		return nil, err
+	}
+
+	statement, err := p.statement()
+	if err != nil {
+		return nil, err
+	}
+
+	return ir.NewForStatement(assignmentNode, up, endExpr, statement), nil
+}
+
+func (p *Parser) ifStatement() (*ir.IfStatement, error) {
 	if err := p.eat(tokens.IF); err != nil {
 		return nil, err
 	}
@@ -589,10 +670,10 @@ func (p *Parser) ifStatement() (*ir.IfStatement, error) {
 			return nil, err
 		}
 
-		return ir.NewIfStatement(condition, statementNode, alternativeNode, p.currentToken), nil
+		return ir.NewIfStatement(condition, statementNode, alternativeNode), nil
 	}
 
-	return ir.NewIfStatement(condition, statementNode, nil, p.currentToken), nil
+	return ir.NewIfStatement(condition, statementNode, nil), nil
 }
 
 func (p *Parser) writeStatement() (*ir.WriteStatement, error) {

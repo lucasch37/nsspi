@@ -38,6 +38,11 @@ const (
 	THEN
 	ELSE
 	MOD
+	FOR
+	TO
+	DOWNTO
+	DO
+	WHILE
 	BEGIN
 	END
 
@@ -85,6 +90,11 @@ var tokenTypeNames = [...]string{
 	"THEN",
 	"ELSE",
 	"MOD",
+	"FOR",
+	"TO",
+	"DOWNTO",
+	"DO",
+	"WHILE",
 	"BEGIN",
 	"END",
 

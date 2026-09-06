@@ -129,6 +129,43 @@ func (sa *SemanticAnalyzer) visit(node ir.Node) (ir.DataType, error) {
 			}
 		}
 
+	case *ir.ForStatement:
+		assignType, err := sa.visit(node.Assign)
+		if err != nil {
+			return ir.NoType, err
+		}
+
+		if assignType != ir.IntegerType {
+			return ir.NoType, sa.error(errors.TypeMismatch, node.Assign.Token)
+		}
+
+		exprType, err := sa.visit(node.EndExpr)
+		if err != nil {
+			return ir.NoType, err
+		}
+
+		if exprType != ir.IntegerType {
+			return ir.NoType, sa.error(errors.TypeMismatch, node.EndExpr.SourceToken())
+		}
+
+		if _, err := sa.visit(node.Statement); err != nil {
+			return ir.NoType, err
+		}
+
+	case *ir.WhileStatement:
+		conditionType, err := sa.visit(node.Condition)
+		if err != nil {
+			return ir.NoType, err
+		}
+
+		if conditionType != ir.BooleanType {
+			return ir.NoType, sa.error(errors.TypeMismatch, node.Condition.SourceToken())
+		}
+
+		if _, err := sa.visit(node.Statement); err != nil {
+			return ir.NoType, err
+		}
+
 	default:
 		return ir.NoType, fmt.Errorf("no visit method for %T", node)
 	}
@@ -343,7 +380,7 @@ func (sa *SemanticAnalyzer) visitAssign(node *ir.Assign) (ir.DataType, error) {
 		return ir.NoType, sa.error(errors.TypeMismatch, node.Right.SourceToken())
 	}
 
-	return ir.NoType, nil
+	return rightType, nil
 }
 
 func (sa *SemanticAnalyzer) visitIdentifier(node *ir.Identifier) (ir.DataType, error) {

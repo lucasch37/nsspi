@@ -103,6 +103,12 @@ func (i *Interpreter) visit(node ir.Node) (Object, error) {
 	case *ir.IfStatement:
 		return i.visitIfStatement(node)
 
+	case *ir.ForStatement:
+		return i.visitForStatement(node)
+
+	case *ir.WhileStatement:
+		return i.visitWhileStatement(node)
+
 	default:
 		return nil, fmt.Errorf("no visit method for %T", node)
 	}
@@ -431,6 +437,26 @@ func (i *Interpreter) visitBlock(node *ir.Block) (Object, error) {
 }
 
 func (i *Interpreter) visitVarDecl(node *ir.VarDecl) (Object, error) {
+	varName := node.IdNode.Value
+	typeName := node.TypeNode.Value
+
+	switch typeName {
+	case "INTEGER":
+		ar := i.CallStack.Peek()
+		ar.Set(varName, IntegerObject{Value: 0})
+	case "REAL":
+		ar := i.CallStack.Peek()
+		ar.Set(varName, RealObject{Value: 0.0})
+	case "STRING":
+		ar := i.CallStack.Peek()
+		ar.Set(varName, StringObject{Value: ""})
+	case "BOOLEAN":
+		ar := i.CallStack.Peek()
+		ar.Set(varName, BooleanObject{Value: false})
+	default:
+		return nil, fmt.Errorf("unknown type: %s", typeName)
+	}
+
 	return nil, nil
 }
 
@@ -561,6 +587,60 @@ func (i *Interpreter) visitIfStatement(node *ir.IfStatement) (Object, error) {
 		}
 		if value != nil {
 			return value, nil
+		}
+	}
+
+	return nil, nil
+}
+
+func (i *Interpreter) visitForStatement(node *ir.ForStatement) (Object, error) {
+	if _, err := i.visit(node.Assign); err != nil {
+		return nil, err
+	}
+
+	startValue, err := i.visit(node.Assign.Left)
+	if err != nil {
+		return nil, err
+	}
+
+	endValue, err := i.visit(node.EndExpr)
+	if err != nil {
+		return nil, err
+	}
+
+	if node.Up {
+		for start := startValue.(IntegerObject).Value; start <= endValue.(IntegerObject).Value; start++ {
+			i.CallStack.Peek().Set(node.Assign.Left.Value, IntegerObject{Value: start})
+			if _, err := i.visit(node.Statement); err != nil {
+				return nil, err
+			}
+		}
+	} else {
+		for start := startValue.(IntegerObject).Value; start >= endValue.(IntegerObject).Value; start-- {
+			i.CallStack.Peek().Set(node.Assign.Left.Value, IntegerObject{Value: start})
+			if _, err := i.visit(node.Statement); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return nil, nil
+}
+
+func (i *Interpreter) visitWhileStatement(node *ir.WhileStatement) (Object, error) {
+	condition, err := i.visit(node.Condition)
+	if err != nil {
+		return nil, err
+	}
+
+	for condition.(BooleanObject).Value {
+		if _, err := i.visit(node.Statement); err != nil {
+			return nil, err
+		}
+
+		condition, err = i.visit(node.Condition)
+		if err != nil {
+			return nil, err
 		}
 	}
 

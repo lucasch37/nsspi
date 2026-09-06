@@ -2,6 +2,8 @@ package parser
 
 import (
 	stderrors "errors"
+	"os"
+	"path/filepath"
 	"testing"
 
 	projecterrors "github.com/lucasch37/nsspi/internal/errors"
@@ -9,6 +11,26 @@ import (
 	"github.com/lucasch37/nsspi/internal/lexer"
 	"github.com/lucasch37/nsspi/internal/tokens"
 )
+
+func TestParseExamples(t *testing.T) {
+	entries, err := os.ReadDir(filepath.Join("..", "..", "examples"))
+	if err != nil {
+		t.Fatalf("read examples directory: %v", err)
+	}
+	for _, entry := range entries {
+		name := entry.Name()
+		if entry.IsDir() || filepath.Ext(name) != ".pas" {
+			continue
+		}
+		t.Run(name, func(t *testing.T) {
+			source, err := os.ReadFile(filepath.Join("..", "..", "examples", name))
+			if err != nil {
+				t.Fatalf("read example: %v", err)
+			}
+			parseProgram(t, string(source))
+		})
+	}
+}
 
 func TestParseProgramStructure(t *testing.T) {
 	program := parseProgram(t, `
@@ -54,6 +76,8 @@ func TestParseProgramStructure(t *testing.T) {
 func TestParseLanguageConstructs(t *testing.T) {
 	program := parseProgram(t, `
 	PROGRAM Example;
+	VAR
+		i : INTEGER;
 	FUNCTION Double(n: INTEGER): INTEGER;
 	BEGIN
 		Double := n * 2
@@ -63,19 +87,21 @@ func TestParseLanguageConstructs(t *testing.T) {
 		IF value > 0 THEN WRITELN(value) ELSE WRITE('zero')
 	END;
 	BEGIN
-		Show(Double(3))
+		FOR i := 1 TO 5 DO WRITELN(Double(i));
+		Show(Double(3));
+		WHILE i < 5 DO WRITELN(Double(i));
 	END.`)
 
-	if len(program.Block.Declarations) != 2 {
-		t.Fatalf("declarations = %d, want 2", len(program.Block.Declarations))
+	if len(program.Block.Declarations) != 3 {
+		t.Fatalf("declarations = %d, want 3", len(program.Block.Declarations))
 	}
 
-	function, ok := program.Block.Declarations[0].(*ir.FunctionDecl)
+	function, ok := program.Block.Declarations[1].(*ir.FunctionDecl)
 	if !ok || function.FuncName != "Double" || len(function.Params) != 1 {
 		t.Fatalf("first declaration = %#v, want one-parameter Double function", program.Block.Declarations[0])
 	}
 
-	procedure, ok := program.Block.Declarations[1].(*ir.ProcedureDecl)
+	procedure, ok := program.Block.Declarations[2].(*ir.ProcedureDecl)
 	if !ok || procedure.ProcName != "Show" || len(procedure.Params) != 1 {
 		t.Fatalf("second declaration = %#v, want one-parameter Show procedure", program.Block.Declarations[1])
 	}
@@ -84,9 +110,17 @@ func TestParseLanguageConstructs(t *testing.T) {
 		t.Errorf("procedure statement type = %T, want *ir.IfStatement", procedure.Block.CompoundStatement.Children[0])
 	}
 
-	call, ok := program.Block.CompoundStatement.Children[0].(*ir.Call)
+	if _, ok := program.Block.CompoundStatement.Children[0].(*ir.ForStatement); !ok {
+		t.Fatalf("main statement type = %T, want *ir.ForStatement", program.Block.CompoundStatement.Children[0])
+	}
+
+	call, ok := program.Block.CompoundStatement.Children[1].(*ir.Call)
 	if !ok || call.CallName != "Show" || len(call.ActualParams) != 1 {
 		t.Fatalf("main statement = %#v, want Show call", program.Block.CompoundStatement.Children[0])
+	}
+
+	if _, ok := program.Block.CompoundStatement.Children[2].(*ir.WhileStatement); !ok {
+		t.Fatalf("main statement type = %T, want *ir.WhileStatement", program.Block.CompoundStatement.Children[0])
 	}
 }
 
@@ -95,9 +129,35 @@ func TestParseRejectsInvalidPrograms(t *testing.T) {
 		name   string
 		source string
 	}{
-		{name: "missing program semicolon", source: "PROGRAM Bad BEGIN END."},
-		{name: "missing assignment expression", source: "PROGRAM Bad; VAR x: INTEGER; BEGIN x := END."},
-		{name: "trailing input", source: "PROGRAM Bad; BEGIN END. BEGIN END"},
+		{
+			name: "missing program semicolon",
+			source: `
+PROGRAM Bad
+BEGIN
+END.
+`,
+		},
+		{
+			name: "missing assignment expression",
+			source: `
+PROGRAM Bad;
+VAR
+	x: INTEGER;
+BEGIN
+	x :=
+END.
+`,
+		},
+		{
+			name: "trailing input",
+			source: `
+PROGRAM Bad;
+BEGIN
+END.
+BEGIN
+END
+`,
+		},
 	}
 
 	for _, tt := range tests {

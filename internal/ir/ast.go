@@ -32,6 +32,8 @@ const (
 	CallNode
 	WriteStatementNode
 	IfStatementNode
+	ForStatementNode
+	WhileStatementNode
 )
 
 var nodeTypeNames = map[NodeType]string{
@@ -54,6 +56,8 @@ var nodeTypeNames = map[NodeType]string{
 	CallNode:           "Call",
 	WriteStatementNode: "WriteStatement",
 	IfStatementNode:    "IfStatement",
+	ForStatementNode:   "ForStatement",
+	WhileStatementNode: "WhileStatement",
 }
 
 func (nt NodeType) Type() NodeType {
@@ -431,19 +435,57 @@ type IfStatement struct {
 	Condition   Node
 	Statement   Node
 	Alternative Node
-	Token       tokens.Token
 }
 
 func (n *IfStatement) SourceToken() tokens.Token {
-	return n.Token
+	return tokens.Token{}
 }
 
-func NewIfStatement(condition Node, statement Node, alternative Node, token tokens.Token) *IfStatement {
+func NewIfStatement(condition Node, statement Node, alternative Node) *IfStatement {
 	return &IfStatement{
 		Condition:   condition,
 		NodeType:    IfStatementNode,
 		Statement:   statement,
 		Alternative: alternative,
-		Token:       token,
 	}
+}
+
+type ForStatement struct {
+	NodeType
+	Assign    *Assign
+	Up        bool
+	EndExpr   Node
+	Statement Node
+}
+
+func NewForStatement(assign *Assign, up bool, endExpr Node, statement Node) *ForStatement {
+	return &ForStatement{
+		NodeType:  ForStatementNode,
+		Assign:    assign,
+		Up:        up,
+		EndExpr:   endExpr,
+		Statement: statement,
+	}
+}
+
+func (n *ForStatement) SourceToken() tokens.Token {
+	return tokens.Token{}
+}
+
+type WhileStatement struct {
+	NodeType
+	Condition Node
+	Statement Node
+}
+
+func NewWhileStatement(condition Node, statement Node) *WhileStatement {
+	return &WhileStatement{
+		NodeType:  WhileStatementNode,
+		Condition: condition,
+		Statement: statement,
+	}
+}
+
+func (w *WhileStatement) SourceToken() tokens.Token {
+	return tokens.Token{}
 }
